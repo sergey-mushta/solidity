@@ -46,6 +46,7 @@ public:
 		m_counter = 0;
 		m_inputSize = 0;
 		m_inFunctionDef = false;
+		m_objectId = 0;
 	}
 	ProtoConverter(ProtoConverter const&) = delete;
 	ProtoConverter(ProtoConverter&&) = delete;
@@ -88,6 +89,10 @@ private:
 	void visit(PopStmt const&);
 	void visit(LowLevelCall const&);
 	void visit(Create const&);
+	void visit(UnaryOpData const&);
+	void visit(Object const&);
+	void visit(Data const&);
+	void visit(Code const&);
 	void visit(Program const&);
 
 	/// Creates a new scope, and adds @a _funcParams to it if it
@@ -109,6 +114,7 @@ private:
 	/// Accepts an arbitrary string, removes all characters that are neither
 	/// alphabets nor digits from it and returns the said string.
 	std::string createAlphaNum(std::string const& _strBytes);
+	std::string getObjectIdentifier(ObjectId const&);
 	enum class NumFunctionReturns
 	{
 		None,
@@ -288,6 +294,8 @@ private:
 	unsigned m_inputSize;
 	/// Predicate that is true if inside function definition, false otherwise
 	bool m_inFunctionDef;
+	/// Index used for naming objects
+	unsigned m_objectId;
 };
 }
 }

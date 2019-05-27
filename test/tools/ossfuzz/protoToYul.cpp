@@ -21,6 +21,7 @@
 #include <libyul/Exceptions.h>
 
 #include <libdevcore/StringUtils.h>
+#include <libdevcore/Whiskers.h>
 
 #include <boost/algorithm/cxx11/all_of.hpp>
 #include <boost/algorithm/string/classification.hpp>
@@ -157,6 +158,9 @@ void ProtoConverter::visit(Expression const& _x)
 		break;
 	case Expression::kCreate:
 		visit(_x.create());
+		break;
+	case Expression::kUnopdata:
+		visit(_x.unopdata());
 		break;
 	case Expression::EXPR_ONEOF_NOT_SET:
 		m_output << dictionaryToken();
@@ -442,6 +446,9 @@ void ProtoConverter::visit(CopyFunc const& _x)
 		break;
 	case CopyFunc::RETURNDATA:
 		m_output << "returndatacopy";
+		break;
+	case CopyFunc::DATA:
+		m_output << "datacopy";
 		break;
 	}
 	m_output << "(";
@@ -988,6 +995,29 @@ void ProtoConverter::visit(TerminatingStmt const& _x)
 	}
 }
 
+std::string ProtoConverter::getObjectIdentifier(ObjectId const&)
+{
+	// TODO: Infer identifier instead of hard-coding like this
+	return "object0";
+}
+
+void ProtoConverter::visit(UnaryOpData const& _x)
+{
+	switch (_x.op())
+	{
+	case UnaryOpData::SIZE:
+		m_output << Whiskers(R"(datasize("<id>")")
+			("id", getObjectIdentifier(_x.identifier()))
+			.render();
+		break;
+	case UnaryOpData::OFFSET:
+		m_output << Whiskers(R"(dataoffset("<id>")")
+			("id", getObjectIdentifier(_x.identifier()))
+			.render();
+		break;
+	}
+}
+
 void ProtoConverter::visit(Statement const& _x)
 {
 	switch (_x.stmt_oneof_case())
@@ -1347,6 +1377,32 @@ void ProtoConverter::visit(PopStmt const& _x)
 	m_output << ")\n";
 }
 
+void ProtoConverter::visit(Code const& _x)
+{
+	m_output << "code {\n";
+	visit(_x.block());
+	m_output << "}\n";
+}
+
+void ProtoConverter::visit(Data const& _x)
+{
+	m_output << "data \"datablock\" hex\"" << createHex(_x.hex()) << "\"\n";
+}
+
+void ProtoConverter::visit(Object const& _x)
+{
+	// object "object0" {
+	// ...
+	// }
+	m_output << "object \"object" << std::to_string(m_objectId++) << "\" {\n";
+	visit(_x.code());
+	if (_x.has_data())
+		visit(_x.data());
+	if (_x.has_obj())
+		visit(_x.obj());
+	m_output << "}\n";
+}
+
 void ProtoConverter::visit(Program const& _x)
 {
 	// Initialize input size
@@ -1359,6 +1415,13 @@ void ProtoConverter::visit(Program const& _x)
 	 *                   x_2 := foo(calldataload(0))
 	 *                   sstore(0, x_2)
 	 */
+	if (_x.has_obj())
+	{
+		visit(_x.obj());
+		// TODO: Mix objects with regular code
+		return;
+	}
+
 	m_output << "{\n";
 	visit(_x.block());
 	m_output << "}\n";
