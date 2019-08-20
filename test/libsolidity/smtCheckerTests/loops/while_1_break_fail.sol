@@ -7,10 +7,14 @@ contract C
 		while (x < 10) {
 			if (b)
 				x = x + 1;
-			else
-				x = 0;
+			else {
+				x = 100;
+				break;
+			}
 		}
-		assert(x > 0);
+		// Should fail because of the if.
+		assert(x >= 50);
 	}
 }
 // ----
+// Warning: (233-248): Assertion violation happens here

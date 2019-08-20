@@ -33,6 +33,11 @@ Z3CHCInterface::Z3CHCInterface():
 	z3::set_param("rewriter.pull_cheap_ite", true);
 	// This needs to be set in the context.
 	m_context->set("timeout", queryTimeout);
+
+	// This needs to be set in the solver.
+	z3::params p(*m_context);
+	p.set("fp.spacer.q3.use_qgen", true);
+	m_solver.set(p);
 }
 
 void Z3CHCInterface::declareVariable(string const& _name, Sort const& _sort)
@@ -82,8 +87,10 @@ pair<CheckResult, vector<string>> Z3CHCInterface::query(Expression const& _expr)
 			break;
 		}
 		case z3::check_result::unknown:
+		{
 			result = CheckResult::UNKNOWN;
 			break;
+		}
 		}
 		// TODO retrieve model / invariants
 	}

@@ -61,9 +61,17 @@ private:
 	bool visit(WhileStatement const&) override;
 	bool visit(ForStatement const&) override;
 	void endVisit(FunctionCall const& _node) override;
+	void endVisit(Break const& _node) override;
+	void endVisit(Continue const& _node) override;
 
 	void visitAssert(FunctionCall const& _funCall);
 	void unknownFunctionCall(FunctionCall const& _funCall);
+	void visitLoop(
+		BreakableStatement const& _loop,
+		Expression const* _condition,
+		Statement const& _body,
+		ASTNode const* _postLoop
+	);
 	//@}
 
 	/// Helpers.
@@ -95,6 +103,7 @@ private:
 	smt::Expression interface();
 	/// Error predicate over current variables.
 	smt::Expression error();
+	smt::Expression error(unsigned _idx);
 
 	/// Creates a block for the given _function or increases its SSA index
 	/// if the block already exists which in practice creates a new function.
@@ -105,6 +114,10 @@ private:
 	/// The predicate parameters are m_currentFunction input, output
 	/// and local variables.
 	void createFunctionBlock(Block const& _block);
+
+	/// Creates a new error block to be used by an assertion.
+	/// Also registers the predicate.
+	void createErrorBlock();
 
 	/// @returns the current symbolic values of the current function's
 	/// input and output parameters.
@@ -126,6 +139,8 @@ private:
 
 	/// Solver related.
 	//@{
+	/// Adds _rule that represents _from -> _to.
+	void addRule(smt::Expression const& _rule, ASTNode const* _from, ASTNode const* _to);
 	/// @returns true if query is unsatisfiable (safe).
 	bool query(smt::Expression const& _query, langutil::SourceLocation const& _location);
 	//@}

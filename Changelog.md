@@ -6,6 +6,7 @@ Language Features:
 
 Compiler Features:
  * Optimizer: Add rule that replaces the BYTE opcode by 0 if the first argument is larger than 31.
+ * SMTChecker: Add loop support to the CHC engine.
 
 
 Bugfixes:
