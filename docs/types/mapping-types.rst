@@ -59,8 +59,8 @@ contract that returns the value at the specified address.
     }
 
 The example below uses a mapping type inside another mapping type. The important
-point to remember are that the mapping inside the mapping is not a return variable,
-but the variable inside it is.
+point to remember are that the mapping inside the mapping is not the return value,
+but the ``bool`` inside it is.
 
 ::
 
@@ -82,8 +82,8 @@ but the variable inside it is.
     contract MappingUser {
         function f() public returns (bool) {
             MappingExample m = new MappingExample();
-            m.transfer(address(this), address(this));
-            return m.validBalances(address(this),address(this));
+            m.transfer(address(this), msg.sender);
+            return m.validBalances(address(this));
         }
     }
 
