@@ -82,7 +82,7 @@ but the variable inside it is.
     contract MappingUser {
         function f() public returns (bool) {
             MappingExample m = new MappingExample();
-            m.transfer(address(this),address(this));
+            m.transfer(address(this), address(this));
             return m.validBalances(address(this),address(this));
         }
     }
