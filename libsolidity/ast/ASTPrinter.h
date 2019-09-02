@@ -71,6 +71,8 @@ public:
 	bool visit(Block const& _node) override;
 	bool visit(PlaceholderStatement const& _node) override;
 	bool visit(IfStatement const& _node) override;
+	bool visit(TryCatchClause const& _node) override;
+	bool visit(TryStatement const& _node) override;
 	bool visit(WhileStatement const& _node) override;
 	bool visit(ForStatement const& _node) override;
 	bool visit(Continue const& _node) override;
@@ -117,6 +119,8 @@ public:
 	void endVisit(Block const&) override;
 	void endVisit(PlaceholderStatement const&) override;
 	void endVisit(IfStatement const&) override;
+	void endVisit(TryCatchClause const&) override;
+	void endVisit(TryStatement const&) override;
 	void endVisit(WhileStatement const&) override;
 	void endVisit(ForStatement const&) override;
 	void endVisit(Continue const&) override;

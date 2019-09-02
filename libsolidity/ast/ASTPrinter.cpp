@@ -227,6 +227,20 @@ bool ASTPrinter::visit(IfStatement const& _node)
 	return goDeeper();
 }
 
+bool ASTPrinter::visit(TryCatchClause const& _node)
+{
+	writeLine("TryCatchClause");
+	printSourcePart(_node);
+	return goDeeper();
+}
+
+bool ASTPrinter::visit(TryStatement const& _node)
+{
+	writeLine("TryStatement");
+	printSourcePart(_node);
+	return goDeeper();
+}
+
 bool ASTPrinter::visit(WhileStatement const& _node)
 {
 	writeLine(_node.isDoWhile() ? "DoWhileStatement" : "WhileStatement");
@@ -510,6 +524,16 @@ void ASTPrinter::endVisit(PlaceholderStatement const&)
 }
 
 void ASTPrinter::endVisit(IfStatement const&)
+{
+	m_indentation--;
+}
+
+void ASTPrinter::endVisit(TryCatchClause const&)
+{
+	m_indentation--;
+}
+
+void ASTPrinter::endVisit(TryStatement const&)
 {
 	m_indentation--;
 }

@@ -69,6 +69,8 @@ public:
 	virtual bool visit(Block& _node) { return visitNode(_node); }
 	virtual bool visit(PlaceholderStatement& _node) { return visitNode(_node); }
 	virtual bool visit(IfStatement& _node) { return visitNode(_node); }
+	virtual bool visit(TryCatchClause& _node) { return visitNode(_node); }
+	virtual bool visit(TryStatement& _node) { return visitNode(_node); }
 	virtual bool visit(WhileStatement& _node) { return visitNode(_node); }
 	virtual bool visit(ForStatement& _node) { return visitNode(_node); }
 	virtual bool visit(Continue& _node) { return visitNode(_node); }
@@ -116,6 +118,8 @@ public:
 	virtual void endVisit(Block& _node) { endVisitNode(_node); }
 	virtual void endVisit(PlaceholderStatement& _node) { endVisitNode(_node); }
 	virtual void endVisit(IfStatement& _node) { endVisitNode(_node); }
+	virtual void endVisit(TryCatchClause& _node) { endVisitNode(_node); }
+	virtual void endVisit(TryStatement& _node) { endVisitNode(_node); }
 	virtual void endVisit(WhileStatement& _node) { endVisitNode(_node); }
 	virtual void endVisit(ForStatement& _node) { endVisitNode(_node); }
 	virtual void endVisit(Continue& _node) { endVisitNode(_node); }
@@ -175,6 +179,8 @@ public:
 	virtual bool visit(Block const& _node) { return visitNode(_node); }
 	virtual bool visit(PlaceholderStatement const& _node) { return visitNode(_node); }
 	virtual bool visit(IfStatement const& _node) { return visitNode(_node); }
+	virtual bool visit(TryCatchClause const& _node) { return visitNode(_node); }
+	virtual bool visit(TryStatement const& _node) { return visitNode(_node); }
 	virtual bool visit(WhileStatement const& _node) { return visitNode(_node); }
 	virtual bool visit(ForStatement const& _node) { return visitNode(_node); }
 	virtual bool visit(Continue const& _node) { return visitNode(_node); }
@@ -222,6 +228,8 @@ public:
 	virtual void endVisit(Block const& _node) { endVisitNode(_node); }
 	virtual void endVisit(PlaceholderStatement const& _node) { endVisitNode(_node); }
 	virtual void endVisit(IfStatement const& _node) { endVisitNode(_node); }
+	virtual void endVisit(TryCatchClause const& _node) { endVisitNode(_node); }
+	virtual void endVisit(TryStatement const& _node) { endVisitNode(_node); }
 	virtual void endVisit(WhileStatement const& _node) { endVisitNode(_node); }
 	virtual void endVisit(ForStatement const& _node) { endVisitNode(_node); }
 	virtual void endVisit(Continue const& _node) { endVisitNode(_node); }
