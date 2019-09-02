@@ -15,6 +15,9 @@ Most of the control structures known from curly-braces languages are available i
 There is: ``if``, ``else``, ``while``, ``do``, ``for``, ``break``, ``continue``, ``return``, with
 the usual semantics known from C or JavaScript.
 
+Solidity also supports exception handling in the form of ``try``/``catch``-statements,
+but only for :ref:`external function calls <external-function-calls>`.
+
 Parentheses can *not* be omitted for conditionals, but curly brances can be omitted
 around single-statement bodies.
 
@@ -383,7 +386,7 @@ of an exception instead of "bubbling up".
 .. warning::
     The low-level functions ``call``, ``delegatecall`` and ``staticcall`` return ``true`` as their first return value if the account called is non-existent, as part of the design of EVM. Existence must be checked prior to calling if needed.
 
-It is not yet possible to catch exceptions with Solidity.
+Exceptions can be caught with the ``try``/``catch`` statement.
 
 ``assert`` and ``require``
 --------------------------
@@ -488,3 +491,73 @@ In the above example, ``revert("Not enough Ether provided.");`` returns the foll
 .. note::
     There used to be a keyword called ``throw`` with the same semantics as ``revert()`` which
     was deprecated in version 0.4.13 and removed in version 0.5.0.
+
+``try``/``catch``
+-----------------
+
+A failure in an external call can be caught using a try/catch statement, as follows:
+
+::
+
+    pragma solidity ^0.6.0;
+
+    interface DataFeed { function getData() public returns (uint value); }
+
+    contract FeedConsumer {
+        DataFeed feed;
+        uint errorCount;
+        function rate(address token) public returns (uint value, bool success) {
+            // Permanently disable the mechanism if there are
+            // more than 10 errors.
+            require(errorCount < 10);
+            try feed.getData() returns (uint value) {
+                return (value, true);
+            } catch Error(string memory reason) {
+                // This is executed in case
+                // revert was called inside getData
+                // and a reason string was provided.
+                errorCount++;
+                return (0, false);
+            } catch (bytes memory lowLevelData) {
+                // This is executed in case there
+                // was a failing assertion, division
+                // by zero, etc.
+                errorCount++;
+                return (0, false);
+            }
+        }
+    }
+
+After the ``try`` keyword, there has to be an expression that evaluates to an external call.
+Any error inside the expression itself is not caught, only the error returned by the
+external call itself. The ``returns`` part (which is optional) that follows declares return variables
+matching the types returned by the external call. In case there was no error,
+these variables are assigned and the contract's execution continues inside the
+first success block. If the end of the success block is reached, execution continues after the ``catch`` blocks.
+
+Currently, Solidity supports different kinds of catch blocks depending on the
+type of error. If the error was caused by ``revert("reasonString")`` or
+``require(false, "reasonString")``, then the catch clause
+of the type ``catch Error(string memory reason)`` will be executed.
+
+It is planned to support other types of error data in the future.
+The string ``Error`` is currently parsed as is and is not treated as an identifier.
+
+The clause ``catch (bytes memory lowLevelData)`` is executed if the error signature
+does not match any other clause or if no error data was provided with the exception.
+The declared variable provides access to the low-level error data in that case.
+
+If you are not interested in the error data, you can just use
+``catch { ... }`` (even as the only catch clause).
+
+In order to catch all error cases, you have to have at least the clause
+``catch { ...}`` or the clause ``catch (bytes memory lowLevelData) { ... }``.
+
+The variables declared in the ``returns`` and the ``catch`` clause are only
+in scope in the block that follows.
+
+.. note::
+
+    If an error happens during the decoding of the return or error data
+    inside a try/catch-statement, this causes an exception in the currently
+    executing contract and because of that, it is not caught in the catch clause.
