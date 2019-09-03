@@ -7,6 +7,7 @@ Breaking changes:
 
 Language Features:
  * Allow global enums and structs.
+ * Introduce syntax for array slices and implement them for dynamic calldata arrays.
 
 
 Compiler Features:

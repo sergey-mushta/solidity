@@ -367,6 +367,14 @@ bool ASTPrinter::visit(IndexAccess const& _node)
 	return goDeeper();
 }
 
+bool ASTPrinter::visit(IndexRangeAccess const& _node)
+{
+	writeLine("IndexRangeAccess");
+	printType(_node);
+	printSourcePart(_node);
+	return goDeeper();
+}
+
 bool ASTPrinter::visit(Identifier const& _node)
 {
 	writeLine(string("Identifier ") + _node.name());

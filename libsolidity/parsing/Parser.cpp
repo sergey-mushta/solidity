@@ -1596,11 +1596,24 @@ ASTPointer<Expression> Parser::parseLeftHandSideExpression(
 		{
 			m_scanner->next();
 			ASTPointer<Expression> index;
+			ASTPointer<Expression> endIndex;
 			if (m_scanner->currentToken() != Token::RBrack)
 				index = parseExpression();
-			nodeFactory.markEndPosition();
-			expectToken(Token::RBrack);
-			expression = nodeFactory.createNode<IndexAccess>(expression, index);
+			if (m_scanner->currentToken() == Token::Colon)
+			{
+				expectToken(Token::Colon);
+				if (m_scanner->currentToken() != Token::RBrack)
+					endIndex = parseExpression();
+				nodeFactory.markEndPosition();
+				expectToken(Token::RBrack);
+				expression = nodeFactory.createNode<IndexRangeAccess>(expression, index, endIndex);
+			}
+			else
+			{
+				nodeFactory.markEndPosition();
+				expectToken(Token::RBrack);
+				expression = nodeFactory.createNode<IndexAccess>(expression, index);
+			}
 			break;
 		}
 		case Token::Period:
@@ -1849,9 +1862,22 @@ Parser::IndexAccessedPath Parser::parseIndexAccessedPath()
 		if (m_scanner->currentToken() != Token::RBrack)
 			index = parseExpression();
 		SourceLocation indexLocation = iap.path.front()->location();
-		indexLocation.end = endPosition();
-		iap.indices.emplace_back(index, indexLocation);
-		expectToken(Token::RBrack);
+		if (m_scanner->currentToken() == Token::Colon)
+		{
+			expectToken(Token::Colon);
+			ASTPointer<Expression> endIndex;
+			if (m_scanner->currentToken() != Token::RBrack)
+				endIndex = parseExpression();
+			indexLocation.end = endPosition();
+			iap.indices.emplace_back(IndexAccessedPath::Index{index, {endIndex}, indexLocation});
+			expectToken(Token::RBrack);
+		}
+		else
+		{
+			indexLocation.end = endPosition();
+			iap.indices.emplace_back(IndexAccessedPath::Index{index, {}, indexLocation});
+			expectToken(Token::RBrack);
+		}
 	}
 
 	return iap;
@@ -1883,8 +1909,10 @@ ASTPointer<TypeName> Parser::typeNameFromIndexAccessStructure(Parser::IndexAcces
 	}
 	for (auto const& lengthExpression: _iap.indices)
 	{
-		nodeFactory.setLocation(lengthExpression.second);
-		type = nodeFactory.createNode<ArrayTypeName>(type, lengthExpression.first);
+		if (lengthExpression.end)
+			parserError(lengthExpression.location, "Expected array length expression.");
+		nodeFactory.setLocation(lengthExpression.location);
+		type = nodeFactory.createNode<ArrayTypeName>(type, lengthExpression.start);
 	}
 	return type;
 }
@@ -1912,8 +1940,11 @@ ASTPointer<Expression> Parser::expressionFromIndexAccessStructure(
 	}
 	for (auto const& index: _iap.indices)
 	{
-		nodeFactory.setLocation(index.second);
-		expression = nodeFactory.createNode<IndexAccess>(expression, index.first);
+		nodeFactory.setLocation(index.location);
+		if (index.end)
+			expression = nodeFactory.createNode<IndexRangeAccess>(expression, index.start, *index.end);
+		else
+			expression = nodeFactory.createNode<IndexAccess>(expression, index.start);
 	}
 	return expression;
 }

@@ -136,19 +136,17 @@ TypePointers TypeChecker::typeCheckABIDecodeAndRetrieveReturnType(FunctionCall c
 		);
 
 	if (arguments.size() >= 1)
-	{
-		BoolResult result = type(*arguments.front())->isImplicitlyConvertibleTo(*TypeProvider::bytesMemory());
-
-		if (!result)
-			m_errorReporter.typeErrorConcatenateDescriptions(
+		if (
+			!type(*arguments.front())->isImplicitlyConvertibleTo(*TypeProvider::bytesMemory()) &&
+			!type(*arguments.front())->isImplicitlyConvertibleTo(*TypeProvider::bytesCalldata())
+		)
+			m_errorReporter.typeError(
 				arguments.front()->location(),
-				"Invalid type for argument in function call. "
-				"Invalid implicit conversion from " +
+				"The first argument to \"abi.decode\" must be implicitly convertible to "
+				"bytes memory or bytes calldata, but is of type " +
 				type(*arguments.front())->toString() +
-				" to bytes memory requested.",
-				result.message()
+				"."
 			);
-	}
 
 	if (arguments.size() < 2)
 		return {};
@@ -2242,6 +2240,14 @@ bool TypeChecker::visit(IndexAccess const& _access)
 	Expression const* index = _access.indexExpression();
 	switch (baseType->category())
 	{
+	case Type::Category::ArraySlice:
+	{
+		auto const& arrayType = dynamic_cast<ArraySliceType const&>(*baseType).arrayType();
+		if (arrayType.location() != DataLocation::CallData || !arrayType.isDynamicallySized())
+			m_errorReporter.typeError(_access.location(), "Index access is only implemented for slices of dynamic calldata arrays.");
+		baseType = &arrayType;
+		[[fallthrough]];
+	}
 	case Type::Category::Array:
 	{
 		ArrayType const& actualType = dynamic_cast<ArrayType const&>(*baseType);
@@ -2333,6 +2339,47 @@ bool TypeChecker::visit(IndexAccess const& _access)
 	_access.annotation().isLValue = isLValue;
 	if (index && !index->annotation().isPure)
 		isPure = false;
+	_access.annotation().isPure = isPure;
+
+	return false;
+}
+
+bool TypeChecker::visit(IndexRangeAccess const& _access)
+{
+	_access.baseExpression().accept(*this);
+	TypePointer exprType = type(_access.baseExpression());
+	ArrayType const* arrayType = nullptr;
+
+	Expression const& start = _access.startExpression();
+	Expression const* end = _access.endExpression();
+
+	bool isLValue = false;
+	bool isPure = _access.baseExpression().annotation().isPure && start.annotation().isPure;
+
+	expectType(start, *TypeProvider::uint256());
+	if (end)
+	{
+		expectType(*end, *TypeProvider::uint256());
+		if (!end->annotation().isPure)
+			isPure = false;
+	}
+
+	if (exprType->category() == Type::Category::TypeType)
+	{
+		m_errorReporter.typeError(_access.location(), "Types cannot be sliced.");
+		_access.annotation().type = exprType;
+		return false;
+	}
+	else if (auto const* arraySlice = dynamic_cast<ArraySliceType const*>(exprType))
+		arrayType = &arraySlice->arrayType();
+	else if (!(arrayType = dynamic_cast<ArrayType const*>(exprType)))
+		m_errorReporter.fatalTypeError(_access.location(), "Index range access is only possible for arrays and array slices.");
+
+
+	if (arrayType->location() != DataLocation::CallData || !arrayType->isDynamicallySized())
+		m_errorReporter.typeError(_access.location(), "Index range access is only supported for dynamic calldata arrays.");
+	_access.annotation().type = TypeProvider::arraySlice(*arrayType);
+	_access.annotation().isLValue = isLValue;
 	_access.annotation().isPure = isPure;
 
 	return false;
