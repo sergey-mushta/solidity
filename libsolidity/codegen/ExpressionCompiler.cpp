@@ -1495,7 +1495,7 @@ bool ExpressionCompiler::visit(MemberAccess const& _memberAccess)
 					m_context << Instruction::SWAP1 << Instruction::POP;
 					break;
 				case DataLocation::Storage:
-					setLValue<StorageArrayLength>(_memberAccess, type);
+					ArrayUtils(m_context).retrieveLength(type);
 					break;
 				case DataLocation::Memory:
 					m_context << Instruction::MLOAD;
