@@ -7,6 +7,7 @@ Breaking changes:
 
 Language Features:
  * Allow global enums and structs.
+ * Allow explicit conversions from ``address`` to ``address payable`` via ``payable(...)``.
 
 
 Compiler Features:

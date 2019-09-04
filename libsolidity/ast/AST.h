@@ -1682,16 +1682,27 @@ private:
 class ElementaryTypeNameExpression: public PrimaryExpression
 {
 public:
-	ElementaryTypeNameExpression(SourceLocation const& _location, ElementaryTypeNameToken const& _type):
-		PrimaryExpression(_location), m_typeToken(_type)
-	{}
+	ElementaryTypeNameExpression(
+		SourceLocation const& _location,
+		ElementaryTypeNameToken const& _type,
+		boost::optional<StateMutability> _stateMutability = {}
+	):
+		PrimaryExpression(_location),
+		m_typeToken(_type),
+		m_stateMutability(_stateMutability)
+	{
+		solAssert(!_stateMutability.is_initialized() || _type.token() == Token::Address, "");
+	}
 	void accept(ASTVisitor& _visitor) override;
 	void accept(ASTConstVisitor& _visitor) const override;
 
 	ElementaryTypeNameToken const& typeName() const { return m_typeToken; }
 
+	boost::optional<StateMutability> const& stateMutability() const { return m_stateMutability; }
+
 private:
 	ElementaryTypeNameToken m_typeToken;
+	boost::optional<StateMutability> m_stateMutability; ///< state mutability for address type
 };
 
 /**

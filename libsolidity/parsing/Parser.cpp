@@ -1585,6 +1585,15 @@ ASTPointer<Expression> Parser::parseLeftHandSideExpression(
 			nodeFactory.markEndPosition();
 		expression = nodeFactory.createNode<NewExpression>(typeName);
 	}
+	else if (m_scanner->currentToken() == Token::Payable)
+	{
+		expectToken(Token::Payable);
+		nodeFactory.markEndPosition();
+		ElementaryTypeNameToken elementaryExpression(Token::Address, 160, 0);
+		expression = nodeFactory.createNode<ElementaryTypeNameExpression>(elementaryExpression, boost::make_optional(StateMutability::Payable));
+		if (m_scanner->currentToken() != Token::LParen)
+			parserError("Expected address to be converted to address payable.");
+	}
 	else
 		expression = parsePrimaryExpression();
 
