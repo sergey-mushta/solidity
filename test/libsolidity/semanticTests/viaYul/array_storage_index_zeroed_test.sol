@@ -2,14 +2,16 @@ contract C {
 	uint[] storageArray;
 	function test_zeroed_indicies(uint256 len) public
 	{
-		storageArray.length = len;
+        for (uint i = 0; i < len; i++)
+			storageArray.push(0);
 
 		for (uint i = 0; i < len; i++)
 			storageArray[i] = i + 1;
 
 		if (len > 3)
 		{
-			storageArray.length = 3;
+            for (uint i = 0; i < 3; i++)
+			    storageArray.push(0);
 
 			for (uint i = 3; i < len; i++)
 			{
@@ -25,8 +27,12 @@ contract C {
 
 		}
 
-		storageArray.length = 0;
-		storageArray.length = len;
+        uint arrayLen = storageArray.length;
+        for (uint i = 0; i < arrayLen; i++)
+			storageArray.pop();
+
+        for (uint i = 0; i < len; i++)
+			storageArray.push(0);
 
 		for (uint i = 0; i < len; i++)
 		{

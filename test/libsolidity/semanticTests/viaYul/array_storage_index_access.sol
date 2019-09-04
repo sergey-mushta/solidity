@@ -2,10 +2,8 @@ contract C {
 	uint[] storageArray;
 	function test_indicies(uint256 len) public
 	{
-		storageArray.length = len;
-
 		for (uint i = 0; i < len; i++)
-			storageArray[i] = i + 1;
+		    storageArray.push(i + 1);
 
 		for (uint i = 0; i < len; i++)
 			require(storageArray[i] == i + 1);

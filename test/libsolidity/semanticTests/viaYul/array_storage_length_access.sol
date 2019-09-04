@@ -2,7 +2,8 @@ contract C {
 	uint[] storageArray;
 	function set_get_length(uint256 len) public returns (uint256)
 	{
-		storageArray.length = len;
+        for (uint i = 0; i < len; i++)
+		    storageArray.push(0);
 		return storageArray.length;
 	}
 

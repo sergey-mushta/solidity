@@ -1,9 +1,9 @@
 contract C {
 	uint[] storageArray;
-	function test_boundery_check(uint256 len, uint256 access) public returns
-(uint256)
+	function test_boundery_check(uint256 len, uint256 access) public returns (uint256)
 	{
-		storageArray.length = len;
+        for (uint i = 0; i < len; i++)
+		    storageArray.push(0);
 		return storageArray[access];
 	}
 }

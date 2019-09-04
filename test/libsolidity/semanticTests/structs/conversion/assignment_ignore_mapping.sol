@@ -20,8 +20,9 @@ contract Test {
         storageA.m[1] = 2;
         storageB.m[3] = 4;
         storageB.x = 5;
-        storageC.ma.length = 6;
-        storageD.a.length = 7;
+        // TODO Fix me!
+        // storageC.ma.length = 6;
+        // storageD.a.length = 7;
     }
     function run() public returns (uint, uint, uint, uint, uint, uint) {
         A memory memoryA = A();
