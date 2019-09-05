@@ -166,6 +166,8 @@ void ProtoConverter::visit(Expression const& _x)
 	case Expression::kUnopdata:
 		if (m_isObject)
 			visit(_x.unopdata());
+		else
+			m_output << dictionaryToken();
 		break;
 	case Expression::EXPR_ONEOF_NOT_SET:
 		m_output << dictionaryToken();
