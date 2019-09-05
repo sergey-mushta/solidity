@@ -47,6 +47,7 @@ public:
 		m_inputSize = 0;
 		m_inFunctionDef = false;
 		m_objectId = 0;
+		m_isObject = false;
 	}
 	ProtoConverter(ProtoConverter const&) = delete;
 	ProtoConverter(ProtoConverter&&) = delete;
@@ -296,6 +297,9 @@ private:
 	bool m_inFunctionDef;
 	/// Index used for naming objects
 	unsigned m_objectId;
+	/// Flag to track whether program is an object (true) or a statement block
+	/// (false: default value)
+	bool m_isObject;
 };
 }
 }

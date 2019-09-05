@@ -55,6 +55,10 @@ string ProtoConverter::createHex(string const& _hexBytes)
 	// Use a dictionary token.
 	if (tmp.empty())
 		tmp = dictionaryToken(HexPrefix::DontAdd);
+	// Hex literals must have even number of digits
+	if (tmp.size() % 2)
+		tmp.insert(0, "0");
+
 	yulAssert(tmp.size() <= 64, "Proto Fuzzer: Dictionary token too large");
 	return tmp;
 }
@@ -160,7 +164,8 @@ void ProtoConverter::visit(Expression const& _x)
 		visit(_x.create());
 		break;
 	case Expression::kUnopdata:
-		visit(_x.unopdata());
+		if (m_isObject)
+			visit(_x.unopdata());
 		break;
 	case Expression::EXPR_ONEOF_NOT_SET:
 		m_output << dictionaryToken();
@@ -436,7 +441,14 @@ void ProtoConverter::visit(NullaryOp const& _x)
 
 void ProtoConverter::visit(CopyFunc const& _x)
 {
-	switch (_x.ct())
+	CopyFunc_CopyType type = _x.ct();
+
+	// datacopy() is valid only if we are inside
+	// a yul object.
+	if (type == CopyFunc::DATA && !m_isObject)
+		return;
+
+	switch (type)
 	{
 	case CopyFunc::CALLDATA:
 		m_output << "calldatacopy";
@@ -1408,23 +1420,24 @@ void ProtoConverter::visit(Program const& _x)
 	// Initialize input size
 	m_inputSize = _x.ByteSizeLong();
 
-	/* Program template is as follows
-	 *      Zero or more statements. If function definition is present, it is
-	 *      called post definition.
-	 *          Example: function foo(x_0) -> x_1 {}
-	 *                   x_2 := foo(calldataload(0))
-	 *                   sstore(0, x_2)
-	 */
-	if (_x.has_obj())
+	// Program is either a yul object or a block of
+	// statements.
+	switch (_x.program_oneof_case())
 	{
+	case Program::kBlock:
+		m_output << "{\n";
+		visit(_x.block());
+		m_output << "}\n";
+		break;
+	case Program::kObj:
+		m_isObject = true;
 		visit(_x.obj());
-		// TODO: Mix objects with regular code
-		return;
+		break;
+	case Program::PROGRAM_ONEOF_NOT_SET:
+		// {} is a trivial yul program
+		m_output << "{}";
+		break;
 	}
-
-	m_output << "{\n";
-	visit(_x.block());
-	m_output << "}\n";
 }
 
 string ProtoConverter::programToString(Program const& _input)
