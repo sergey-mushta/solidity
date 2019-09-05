@@ -767,24 +767,27 @@ bool ContractCompiler::visit(TryStatement const& _tryStatement)
 	CompilerContext::LocationSetter locationSetter(m_context, _tryStatement);
 
 	compileExpression(_tryStatement.externalCall());
+	unsigned returnSize = _tryStatement.externalCall().annotation().type->sizeOnStack();
 
 	// Stack: [ return values] <success flag>
-	m_context << Instruction::ISZERO;
-	eth::AssemblyItem catchTag = m_context.appendConditionalJump();
+	eth::AssemblyItem successTag = m_context.appendConditionalJump();
 
-	unsigned returnSize = _tryStatement.externalCall().annotation().type->sizeOnStack();
+	// Catch case.
+	m_context.adjustStackOffset(-returnSize);
+
+	// TODO select proper clause and decode data
+	_tryStatement.clauses().at(1)->accept(*this);
+
+	eth::AssemblyItem endTag = m_context.appendJumpToNew();
+
+	m_context << successTag;
+	m_context.adjustStackOffset(returnSize);
+	// Stack: return values
 	if (!_tryStatement.clauses().front()->parameters())
 		CompilerUtils(m_context).popStackSlots(returnSize);
 
 	// TODO assert that the types are the same.
 	_tryStatement.clauses().front()->accept(*this);
-
-	eth::AssemblyItem endTag = m_context.appendJumpToNew();
-
-	m_context << catchTag;
-
-	// TODO select proper clause and decode data
-	_tryStatement.clauses().at(1)->accept(*this);
 
 	m_context << endTag;
 	checker.check();
@@ -798,10 +801,10 @@ bool ContractCompiler::visit(TryCatchClause const& _clause)
 	unsigned varSize = 0;
 
 	if (_clause.parameters())
-		for (ASTPointer<VariableDeclaration> const& varDecl: _clause.parameters()->parameters())
+		for (ASTPointer<VariableDeclaration> const& varDecl: _clause.parameters()->parameters() | boost::adaptors::reversed)
 		{
-			m_context.addVariable(*varDecl, varSize);
 			varSize += varDecl->annotation().type->sizeOnStack();
+			m_context.addVariable(*varDecl, varSize);
 		}
 
 	_clause.block().accept(*this);
