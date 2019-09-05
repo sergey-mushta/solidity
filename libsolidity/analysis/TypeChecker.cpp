@@ -745,6 +745,23 @@ bool TypeChecker::visit(IfStatement const& _ifStatement)
 	return false;
 }
 
+void TypeChecker::endVisit(TryStatement const& _tryStatement)
+{
+	FunctionCall const* externalCall = dynamic_cast<FunctionCall const*>(&_tryStatement.externalCall());
+	if (!externalCall || externalCall->annotation().kind != FunctionCallKind::FunctionCall)
+	{
+		// TODO check that it also works with create and library calls.
+		m_errorReporter.typeError(
+			_tryStatement.externalCall().location(),
+			"Try can only be used with external function calls."
+		);
+		return;
+	}
+	externalCall->annotation().tryCall = true;
+	// TODO check that variable types match.
+	// TODO check that it is a regular external call, not a low-level call.
+}
+
 bool TypeChecker::visit(WhileStatement const& _whileStatement)
 {
 	expectType(_whileStatement.condition(), *TypeProvider::boolean());
