@@ -105,6 +105,7 @@ private:
 	bool visit(FunctionDefinition const& _function) override;
 	bool visit(InlineAssembly const& _inlineAssembly) override;
 	bool visit(TryStatement const& _tryStatement) override;
+	void handleCatch(std::vector<ASTPointer<TryCatchClause>> const& _catchClauses);
 	bool visit(TryCatchClause const& _clause) override;
 	bool visit(IfStatement const& _ifStatement) override;
 	bool visit(WhileStatement const& _whileStatement) override;

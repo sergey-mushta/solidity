@@ -775,23 +775,112 @@ bool ContractCompiler::visit(TryStatement const& _tryStatement)
 	// Catch case.
 	m_context.adjustStackOffset(-returnSize);
 
-	// TODO select proper clause and decode data
-	_tryStatement.clauses().at(1)->accept(*this);
+	handleCatch(_tryStatement.clauses());
 
 	eth::AssemblyItem endTag = m_context.appendJumpToNew();
 
 	m_context << successTag;
 	m_context.adjustStackOffset(returnSize);
-	// Stack: return values
-	if (!_tryStatement.clauses().front()->parameters())
-		CompilerUtils(m_context).popStackSlots(returnSize);
+	{
+		// Success case.
+		// Stack: return values
+		TryCatchClause const& successClause = *_tryStatement.clauses().front();
+		if (successClause.parameters())
+		{
+			vector<TypePointer> exprTypes{_tryStatement.externalCall().annotation().type};
+			if (auto tupleType = dynamic_cast<TupleType const*>(exprTypes.front()))
+				exprTypes = tupleType->components();
+			vector<ASTPointer<VariableDeclaration>> const& params = successClause.parameters()->parameters();
+			solAssert(exprTypes.size() == params.size(), "");
+			for (size_t i = 0; i < exprTypes.size(); ++i)
+				solAssert(*exprTypes[i] == *params[i]->annotation().type, "");
+		}
+		else
+			CompilerUtils(m_context).popStackSlots(returnSize);
 
-	// TODO assert that the types are the same.
-	_tryStatement.clauses().front()->accept(*this);
+		_tryStatement.clauses().front()->accept(*this);
+	}
 
 	m_context << endTag;
 	checker.check();
 	return false;
+}
+
+void ContractCompiler::handleCatch(vector<ASTPointer<TryCatchClause>> const& _catchClauses)
+{
+	ASTPointer<TryCatchClause> structured{};
+	ASTPointer<TryCatchClause> fallback{};
+	for (size_t i = 1; i < _catchClauses.size(); ++i)
+		if (_catchClauses[i]->errorName() == "Error")
+			structured = _catchClauses[i];
+		else if (_catchClauses[i]->errorName().empty())
+			fallback = _catchClauses[i];
+		else
+			solAssert(false, "");
+
+	solAssert(_catchClauses.size() == 1 + (structured ? 1 : 0) + (fallback ? 1 : 0), "");
+
+	eth::AssemblyItem endTag = m_context.newTag();
+	eth::AssemblyItem fallbackTag = m_context.newTag();
+	if (structured)
+	{
+		solAssert(
+			fallback->parameters()->parameters().size() == 1 &&
+			*fallback->parameters()->parameters().front()->annotation().type == *TypeProvider::stringMemory(),
+			""
+		);
+		solAssert(m_context.evmVersion().supportsReturndata(), "");
+		solAssert(m_context.evmVersion().hasBitwiseShifting(), "");
+
+		m_context << u256(1);
+		m_context.appendInlineAssembly(R"({
+			if gt(returndatasize(), 3) {
+				returndatacopy(0, 0, 4)
+				let sig := shr(mload(0), 224)
+				if eq(sig, <ErrorSignature>) { useFallback := 0 }
+			}
+			})", {"useFallback"});
+		m_context.appendConditionalJumpTo(fallbackTag);
+
+		m_context << u256(0);
+		m_context.appendInlineAssembly(R"({
+			v := mload(0x40)
+			mstore(0x40, add(v, and(add(returndatasize(), 0x1f), not(0x1f))))
+			returndatacopy(v, 4, sub(returndatasize(), 4))
+		})", {"v"});
+		// TODO abiDecode might be overkill and it copies again.
+		CompilerUtils(m_context).abiDecode({TypeProvider::stringMemory()}, true);
+		structured->accept(*this);
+		m_context.appendJumpTo(endTag);
+	}
+	m_context << fallbackTag;
+	if (fallback)
+	{
+		if (fallback->parameters())
+		{
+			solAssert(m_context.evmVersion().supportsReturndata(), "");
+			solAssert(
+				fallback->parameters()->parameters().size() == 1 &&
+				*fallback->parameters()->parameters().front()->annotation().type == *TypeProvider::bytesMemory(),
+				""
+			);
+			CompilerUtils(m_context).returnDataToArray();
+		}
+
+		fallback->accept(*this);
+	}
+	else
+	{
+		// re-throw
+		if (m_context.evmVersion().supportsReturndata())
+			m_context.appendInlineAssembly(R"({
+				returndatacopy(0, 0, returndatasize())
+				revert(0, returndatasize())
+			})");
+		else
+			m_context.appendRevert();
+	}
+	m_context << endTag;
 }
 
 bool ContractCompiler::visit(TryCatchClause const& _clause)
