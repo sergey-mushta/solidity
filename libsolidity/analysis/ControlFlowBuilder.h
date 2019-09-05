@@ -45,6 +45,7 @@ private:
 	// Visits for constructing the control flow.
 	bool visit(BinaryOperation const& _operation) override;
 	bool visit(Conditional const& _conditional) override;
+	bool visit(TryStatement const& _tryStatement) override;
 	bool visit(IfStatement const& _ifStatement) override;
 	bool visit(ForStatement const& _forStatement) override;
 	bool visit(WhileStatement const& _whileStatement) override;

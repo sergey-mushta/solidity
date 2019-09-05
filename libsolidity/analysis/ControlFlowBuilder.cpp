@@ -85,6 +85,13 @@ bool ControlFlowBuilder::visit(Conditional const& _conditional)
 	return false;
 }
 
+bool ControlFlowBuilder::visit(TryStatement const&)
+{
+	// TODO
+
+	return true;
+}
+
 bool ControlFlowBuilder::visit(IfStatement const& _ifStatement)
 {
 	solAssert(!!m_currentNode, "");
