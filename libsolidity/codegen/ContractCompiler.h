@@ -104,6 +104,8 @@ private:
 	bool visit(VariableDeclaration const& _variableDeclaration) override;
 	bool visit(FunctionDefinition const& _function) override;
 	bool visit(InlineAssembly const& _inlineAssembly) override;
+	bool visit(TryStatement const& _tryStatement) override;
+	bool visit(TryCatchClause const& _clause) override;
 	bool visit(IfStatement const& _ifStatement) override;
 	bool visit(WhileStatement const& _whileStatement) override;
 	bool visit(ForStatement const& _forStatement) override;

@@ -761,6 +761,57 @@ bool ContractCompiler::visit(InlineAssembly const& _inlineAssembly)
 	return false;
 }
 
+bool ContractCompiler::visit(TryStatement const& _tryStatement)
+{
+	StackHeightChecker checker(m_context);
+	CompilerContext::LocationSetter locationSetter(m_context, _tryStatement);
+
+	compileExpression(_tryStatement.externalCall());
+
+	// Stack: [ return values] <success flag>
+	m_context << Instruction::ISZERO;
+	eth::AssemblyItem catchTag = m_context.appendConditionalJump();
+
+	unsigned returnSize = _tryStatement.externalCall().annotation().type->sizeOnStack();
+	if (!_tryStatement.clauses().front()->parameters())
+		CompilerUtils(m_context).popStackSlots(returnSize);
+
+	// TODO assert that the types are the same.
+	_tryStatement.clauses().front()->accept(*this);
+
+	eth::AssemblyItem endTag = m_context.appendJumpToNew();
+
+	m_context << catchTag;
+
+	// TODO select proper clause and decode data
+	_tryStatement.clauses().at(1)->accept(*this);
+
+	m_context << endTag;
+	checker.check();
+	return false;
+}
+
+bool ContractCompiler::visit(TryCatchClause const& _clause)
+{
+	CompilerContext::LocationSetter locationSetter(m_context, _clause);
+
+	unsigned varSize = 0;
+
+	if (_clause.parameters())
+		for (ASTPointer<VariableDeclaration> const& varDecl: _clause.parameters()->parameters())
+		{
+			m_context.addVariable(*varDecl, varSize);
+			varSize += varDecl->annotation().type->sizeOnStack();
+		}
+
+	_clause.block().accept(*this);
+
+	m_context.removeVariablesAboveStackHeight(m_context.stackHeight() - varSize);
+	CompilerUtils(m_context).popStackSlots(varSize);
+
+	return false;
+}
+
 bool ContractCompiler::visit(IfStatement const& _ifStatement)
 {
 	StackHeightChecker checker(m_context);
