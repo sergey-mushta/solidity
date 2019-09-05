@@ -2097,28 +2097,23 @@ void ExpressionCompiler::appendExternalFunctionCall(
 
 	eth::AssemblyItem endTag = m_context.newTag();
 
-	if (returnSuccessConditionAndReturndata)
-		m_context << swapInstruction(remainsSize);
-	else if (_tryCall)
-	{
-		m_context << Instruction::DUP1 << Instruction::ISZERO;
-		m_context.appendConditionalJumpTo(endTag);
-		m_context << Instruction::POP;
-	}
-	else
+	if (!returnSuccessConditionAndReturndata && !_tryCall)
 	{
 		// Propagate error condition (if CALL pushes 0 on stack).
 		m_context << Instruction::ISZERO;
 		m_context.appendConditionalRevert(true);
 	}
-
+	m_context << swapInstruction(remainsSize);
 	utils().popStackSlots(remainsSize);
 
+	// Only success flag is remaining on stack.
 
-	// In success case, decode and put 1 on stack.
-	// in failure case, do not decode and put 0 on stack.
-
-	// Stack: [success condition]
+	if (_tryCall)
+	{
+		m_context << Instruction::DUP1 << Instruction::ISZERO;
+		m_context.appendConditionalJumpTo(endTag);
+	}
+	m_context << Instruction::POP;
 
 	if (returnSuccessConditionAndReturndata)
 	{
