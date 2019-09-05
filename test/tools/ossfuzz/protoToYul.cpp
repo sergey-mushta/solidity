@@ -1020,12 +1020,12 @@ void ProtoConverter::visit(UnaryOpData const& _x)
 	switch (_x.op())
 	{
 	case UnaryOpData::SIZE:
-		m_output << Whiskers(R"(datasize("<id>")")
+		m_output << Whiskers(R"(datasize("<id>"))")
 			("id", getObjectIdentifier(_x.identifier()))
 			.render();
 		break;
 	case UnaryOpData::OFFSET:
-		m_output << Whiskers(R"(dataoffset("<id>")")
+		m_output << Whiskers(R"(dataoffset("<id>"))")
 			("id", getObjectIdentifier(_x.identifier()))
 			.render();
 		break;
