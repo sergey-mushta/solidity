@@ -34,6 +34,8 @@
 
 #include <liblangutil/ErrorReporter.h>
 
+#include <libdevcore/Whiskers.h>
+
 #include <boost/range/adaptor/reversed.hpp>
 #include <algorithm>
 
@@ -825,31 +827,55 @@ void ContractCompiler::handleCatch(vector<ASTPointer<TryCatchClause>> const& _ca
 	if (structured)
 	{
 		solAssert(
-			fallback->parameters()->parameters().size() == 1 &&
-			*fallback->parameters()->parameters().front()->annotation().type == *TypeProvider::stringMemory(),
+			structured->parameters() &&
+			structured->parameters()->parameters().size() == 1 &&
+			*structured->parameters()->parameters().front()->annotation().type == *TypeProvider::stringMemory(),
 			""
 		);
 		solAssert(m_context.evmVersion().supportsReturndata(), "");
 		solAssert(m_context.evmVersion().hasBitwiseShifting(), "");
 
-		m_context << u256(1);
-		m_context.appendInlineAssembly(R"({
-			if gt(returndatasize(), 3) {
-				returndatacopy(0, 0, 4)
-				let sig := shr(mload(0), 224)
-				if eq(sig, <ErrorSignature>) { useFallback := 0 }
-			}
-			})", {"useFallback"});
+		string errorHash = FixedHash<4>(dev::keccak256("Error(string)")).hex();
+
+		m_context << u256(0) << u256(0);
+		m_context.appendInlineAssembly(
+			Whiskers(R"({
+				data := mload(0x40)
+				for {} 1 {} {
+					if lt(returndatasize(), 0x44) { error := 1 break }
+					returndatacopy(0, 0, 4)
+					let sig := shr(mload(0), 224)
+					if iszero(eq(sig, <ErrorSignature>)) { error := 1 break }
+					returndatacopy(data, 4, sub(returndatasize(), 4))
+					let offset := mload(data)
+					if gt(offset, 0xffffffffffffffff) {
+						error := 1
+						break
+					}
+					if gt(add(offset, 0x24), returndatasize()) {
+						error := 1
+						break
+					}
+					let msg := add(data, offset)
+					let length := mload(msg)
+					if gt(length, 0xffffffffffffffff) {
+						error := 1
+						break
+					}
+					let end := add(add(msg, 0x20), length)
+					if gt(end, add(data, returndatasize())) {
+						error := 1
+						break
+					}
+					mstore(0x40, and(add(end, 0x1f), not(0x1f)))
+					data := msg
+					break
+				}
+			})")("ErrorSignature", FixedHash<4>(dev::keccak256("Error(string)")).hex()).render(),
+			{"data", "error"}
+		);
 		m_context.appendConditionalJumpTo(fallbackTag);
 
-		m_context << u256(0);
-		m_context.appendInlineAssembly(R"({
-			v := mload(0x40)
-			mstore(0x40, add(v, and(add(returndatasize(), 0x1f), not(0x1f))))
-			returndatacopy(v, 4, sub(returndatasize(), 4))
-		})", {"v"});
-		// TODO abiDecode might be overkill and it copies again.
-		CompilerUtils(m_context).abiDecode({TypeProvider::stringMemory()}, true);
 		structured->accept(*this);
 		m_context.appendJumpTo(endTag);
 	}
