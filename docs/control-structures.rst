@@ -528,7 +528,7 @@ A failure in an external call can be caught using a try/catch statement, as foll
         }
     }
 
-After the ``try`` keyword, there has to be an expression that evaluates to an external call.
+The ``try`` keyword has to be followed by an expression representing an external function call.
 Any error inside the expression itself is not caught, only the error returned by the
 external call itself. The ``returns`` part (which is optional) that follows declares return variables
 matching the types returned by the external call. In case there was no error,
